@@ -651,22 +651,6 @@ async function callGemini(question) {
   return JSON.parse(raw);
 }
 
-規則：actions 最多5條、緊急狀況用urgent、只輸出JSON`;
-
-  const fmtRes = await fetch(GEMINI_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: structPrompt }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
-    })
-  });
-  if (!fmtRes.ok) throw new Error('Format API error ' + fmtRes.status);
-  const fmtData = await fmtRes.json();
-  let raw = fmtData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  raw = raw.replace(/```json|```/g, '').trim();
-  return JSON.parse(raw);
-}
 
 // ─── 渲染回覆 HTML ───────────────────────────────
 function buildAdviceHTML(data) {
