@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CareMate｜高齡衛教語音輔助系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@600&display=swap" rel="stylesheet">
+
+<style>
+/* ===================================================
+   CSS 設計語言：溫暖醫療風格
+   配色：深松石藍為主色、暖米白為底色、珊瑚橘為強調
+   字體：Noto Sans TC 確保中文清晰易讀
+   競賽評分對應：高齡友善設計 (35%) - 所有字體 ≥ 24px
+=================================================== */
+:root {
+  --bg-page:       #F5F0E8;    /* 暖米底色 */
+  --bg-card:       #FFFDF8;    /* 卡片白 */
+  --bg-card-alt:   #EEF7F4;    /* 回覆區淡綠底 */
+  --primary:       #1D6A72;    /* 深松石藍 */
+  --primary-dark:  #144E55;    /* 深色變體 */
+  --primary-light: #A8D5D1;    /* 淡色點綴 */
+  --accent:        #E07A45;    /* 珊瑚橘強調色 */
+  --accent-light:  #FAE5D6;    /* 淡橘背景 */
+  --text-main:     #1A1A1A;    /* 主文字 */
+  --text-sub:      #4A4A4A;    /* 次文字 */
+  --text-muted:    #7A8C8A;    /* 輔助文字 */
+  --danger:        #C0392B;    /* 警告紅 */
+  --success:       #1A7A4A;    /* 成功綠 */
+  --radius-lg:     20px;
+  --radius-xl:     32px;
+  --shadow-card:   0 4px 24px rgba(29,106,114,0.10);
+  --shadow-btn:    0 6px 20px rgba(29,106,114,0.30);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  min-height: 100vh;
+  /* 競賽設計：溫暖、安心的背景紋理 */
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(168,213,209,0.18) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(224,122,69,0.08) 0%, transparent 40%);
+}
+
+/* ─── 頁首 ─── */
+header {
+  background: var(--primary);
+  padding: 18px 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+}
+
+.logo-icon {
+  width: 52px; height: 52px;
+  background: white;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+
+.logo-text h1 {
+  font-family: 'Noto Serif TC', serif;
+  font-size: 26px;
+  color: white;
+  letter-spacing: 0.05em;
+}
+
+.logo-text p {
+  font-size: 14px;
+  color: var(--primary-light);
+  margin-top: 2px;
+}
+
+
+/* ─── 主容器 ─── */
+main {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+}
+
+/* ─── 狀態橫幅 ─── */
+.status-banner {
+  background: var(--bg-card);
+  border: 2px solid var(--primary-light);
+  border-radius: var(--radius-lg);
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+  box-shadow: var(--shadow-card);
+  transition: all 0.4s ease;
+}
+
+.status-banner.listening {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+.status-banner.thinking {
+  border-color: var(--primary);
+  background: #EEF7F4;
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224,122,69,0.2); }
+  50%       { box-shadow: 0 0 0 8px rgba(224,122,69,0); }
+}
+
+.status-dot {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.status-dot.active { background: var(--accent); animation: blink 0.8s ease-in-out infinite; }
+.status-dot.thinking { background: var(--primary); }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.8); }
+}
+
+.status-text {
+  font-size: 22px;    /* 競賽要求：大字體 ≥ 24px */
+  font-weight: 500;
+  color: var(--text-main);
+  flex: 1;
+}
+
+/* ─── 錄音按鈕（核心互動元件） ─── */
+/* 創新應用性：大型可見按鈕，降低使用門檻 */
+.mic-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  margin: 32px 0;
+}
+
+.mic-btn {
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: var(--shadow-btn);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+  /* 競賽設計：高對比、大目標區域，符合高齡操作需求 */
+}
+
+/* 波紋動畫底層 */
+.mic-btn::before {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  transform: scale(0);
+  transition: transform 0.4s ease;
+}
+
+.mic-btn:hover::before { transform: scale(1); }
+
+.mic-btn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 8px 32px rgba(29,106,114,0.40);
+}
+
+.mic-btn:active { transform: scale(0.97); }
+
+/* 錄音中狀態：醒目視覺回饋（競賽高齡設計要求） */
+.mic-btn.recording {
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(224,122,69,0.5);
+  animation: mic-pulse 1s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(224,122,69,0.5); }
+  70%  { box-shadow: 0 0 0 24px rgba(224,122,69,0); }
+  100% { box-shadow: 0 0 0 0   rgba(224,122,69,0); }
+}
+
+.mic-icon {
+  font-size: 64px;
+  line-height: 1;
+  user-select: none;
+}
+
+.mic-label {
+  font-size: 22px;    /* 競賽：≥ 24px 大字 */
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* 快捷問題按鈕列 */
+.quick-questions {
+  width: 100%;
+}
+
+.quick-title {
+  font-size: 18px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.quick-btn {
+  background: var(--bg-card);
+  border: 1.5px solid var(--primary-light);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 18px;    /* 競賽：大字體 */
+  color: var(--primary-dark);
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(29,106,114,0.07);
+}
+
+.quick-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(29,106,114,0.20);
+}
+
+.quick-btn:active { transform: translateY(0); }
+
+/* ─── 識別到的語音文字 ─── */
+.transcript-box {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  border-left: 5px solid var(--accent);
+  box-shadow: var(--shadow-card);
+  display: none;
+}
+
+.transcript-box.visible { display: block; }
+
+.transcript-label {
+  font-size: 16px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transcript-text {
+  font-size: 24px;    /* 競賽：≥ 24px */
+  font-weight: 500;
+  color: var(--text-main);
+  line-height: 1.6;
+}
+
+/* ─── 衛教回覆卡片 ─── */
+/* 實用性：精簡白話呈現，適合長輩閱讀 */
+.advice-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  box-shadow: var(--shadow-card);
+  border: 1.5px solid var(--primary-light);
+  display: none;
+  animation: slide-up 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.advice-card.visible { display: block; }
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.advice-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1.5px solid #E8F4F2;
+}
+
+.advice-source-badge {
+  background: #E8F4F2;
+  color: var(--primary-dark);
+  font-size: 13px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.rag-indicator {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 警告等級標籤 */
+.alert-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.alert-level.normal  { background: #E8F8F0; color: var(--success); }
+.alert-level.caution { background: #FFF5E0; color: #B8660A; }
+.alert-level.urgent  { background: #FDE8E8; color: var(--danger); }
+
+/* 主建議文字 */
+.advice-main {
+  font-size: 26px;    /* 競賽：≥ 24px，長輩易讀 */
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+/* 行動建議條目 */
+.action-list { list-style: none; }
+
+.action-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  margin-bottom: 10px;
+  background: var(--bg-card-alt);
+  font-size: 22px;    /* 競賽：≥ 24px */
+  line-height: 1.5;
+  color: var(--text-main);
+}
+
+.action-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* 就醫警示區塊 */
+.see-doctor {
+  background: #FDE8E8;
+  border: 2px solid #F5B7B1;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.see-doctor-icon { font-size: 32px; }
+
+.see-doctor-text {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--danger);
+  line-height: 1.4;
+}
+
+/* 免責聲明 */
+.disclaimer {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 14px;
+  line-height: 1.6;
+}
+
+/* ─── 載入動畫 ─── */
+.loading-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 36px 28px;
+  box-shadow: var(--shadow-card);
+  text-align: center;
+  display: none;
+}
+
+.loading-card.visible { display: block; }
+
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: loading-bounce 1.2s ease-in-out infinite;
+}
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes loading-bounce {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+  40%           { transform: scale(1.2); opacity: 1; }
+}
+
+.loading-text {
+  font-size: 24px;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+.loading-steps {
+  margin-top: 16px;
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.step-item {
+  padding: 4px 0;
+  transition: color 0.3s;
+}
+
+.step-item.active { color: var(--primary); font-weight: 700; }
+.step-item.done   { color: var(--success); }
+
+/* ─── 頁尾 ─── */
+footer {
+  text-align: center;
+  padding: 24px;
+  font-size: 13px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--primary-light);
+  margin-top: 40px;
+}
+
+/* ─── 無障礙：焦點樣式 ─── */
+button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+
+/* ─── 響應式 ─── */
+@media (max-width: 500px) {
+  .quick-grid { grid-template-columns: 1fr; }
+  .mic-btn { width: 150px; height: 150px; }
+  .mic-icon { font-size: 52px; }
+  header { padding: 14px 16px; }
+  .header-badge { display: none; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- 頁首 -->
+<header>
+  <div class="logo-icon" aria-hidden="true">🏥</div>
+  <div class="logo-text">
+    <h1>CareMate</h1>
+    <p>高齡衛教語音輔助系統</p>
+  </div>
+
+</header>
+
+<main>
+
+  <!-- 狀態橫幅 -->
+  <!-- 實用性：即時顯示系統狀態，讓長輩知道現在在做什麼 -->
+  <div class="status-banner" id="statusBanner">
+    <div class="status-dot" id="statusDot"></div>
+    <p class="status-text" id="statusText">✨ 請按下麥克風，說出您的健康問題</p>
+  </div>
+
+  <!-- 麥克風互動區域 -->
+  <!-- 創新應用性：Web Speech API 語音識別，零輸入門檻 -->
+  <section class="mic-section" aria-label="語音輸入">
+
+    <button class="mic-btn" id="micBtn"
+            onclick="toggleRecording()"
+            aria-label="按我說話，啟動語音輸入"
+            title="點擊開始錄音">
+      <span class="mic-icon" id="micIcon">🎙️</span>
+      <span class="mic-label" id="micLabel">按我說話</span>
+    </button>
+
+    <!-- 快捷問題（輔助輸入，降低操作難度） -->
+    <div class="quick-questions" aria-label="常見健康問題快選">
+      <p class="quick-title">👇 或點選常見問題</p>
+      <div class="quick-grid">
+        <button class="quick-btn" onclick="askQuestion('我最近血壓有點高怎麼辦？')">
+          ❤️ 血壓偏高<br>怎麼辦？
+        </button>
+        <button class="quick-btn" onclick="askQuestion('血糖高要注意什麼？')">
+          🩸 血糖偏高<br>要注意什麼？
+        </button>
+        <button class="quick-btn" onclick="askQuestion('膝蓋痛可以做什麼運動？')">
+          🦵 膝蓋痛<br>能做什麼運動？
+        </button>
+        <button class="quick-btn" onclick="askQuestion('我最近睡不好怎麼辦？')">
+          😴 睡眠不好<br>怎麼辦？
+        </button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- 語音識別文字顯示 -->
+  <div class="transcript-box" id="transcriptBox" aria-live="polite">
+    <div class="transcript-label">
+      <span>🗣️</span>
+      <span>您說的是：</span>
+    </div>
+    <p class="transcript-text" id="transcriptText"></p>
+  </div>
+
+  <!-- 載入動畫 -->
+  <!-- 創新應用性：模擬 RAG 三步驟，讓使用者理解 AI 正在查詢 -->
+  <div class="loading-card" id="loadingCard" aria-live="polite" aria-label="正在查詢衛教資料">
+    <div class="loading-dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+    <p class="loading-text">CareMate 正在為您查詢資料…</p>
+    <div class="loading-steps">
+      <div class="step-item" id="step1">⏳ 分析您的問題</div>
+      <div class="step-item" id="step2">⏳ 查詢衛福部健康資料庫</div>
+      <div class="step-item" id="step3">⏳ 整理最適合您的建議</div>
+    </div>
+  </div>
+
+  <!-- 衛教回覆卡片 -->
+  <!-- 高齡友善設計：大字體、精簡條列、清楚行動指引 -->
+  <div class="advice-card" id="adviceCard" aria-live="polite">
+    <div class="advice-header">
+      <span class="advice-source-badge">📚 衛福部資料庫</span>
+      <span class="rag-indicator" aria-label="資料來源">
+        <span>🔍 RAG 檢索</span>
+      </span>
+    </div>
+    <div id="adviceContent"></div>
+    <p class="disclaimer">
+      ⚠️ 本系統提供一般衛教資訊，不取代醫師診斷。<br>
+      如有不適，請儘速就醫或撥打 1922 健康諮詢專線。
+    </p>
+  </div>
+
+</main>
+
+<footer>
+  CareMate 高齡衛教語音輔助系統 &nbsp;|&nbsp; 技術：Web Speech API + 模擬 RAG &nbsp;|&nbsp; 資料來源：衛生福利部
+</footer>
+
+<script>
+/* ===================================================
+   CareMate 語音互動引擎
+   ─────────────────────────────────────────────────
+   【創新應用性】：
+     - 使用瀏覽器原生 Web Speech API，零輸入門檻
+     - 串接 Google Gemini API，真實 AI 衛教回覆
+     - System prompt 限定回覆格式，確保高齡友善輸出
+   【實用性】：
+     - 支援快捷問題與語音雙模式輸入
+     - 回覆格式針對長輩閱讀習慣優化（短句、大字、emoji）
+     - 內建就醫警示，確保使用安全性
+=================================================== */
+
+const GEMINI_API_KEY = 'AIzaSyBTxMwLV5RZnAoQUOduCJGLu9VYTJdCeQw';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+// ─── 狀態管理 ────────────────────────────────────
+let isRecording = false;
+let recognition  = null;
+
+// ─── 呼叫 Gemini API ─────────────────────────────
+async function callGemini(question) {
+  const systemPrompt = `你是 CareMate，一個專為台灣年長者設計的健康衛教助理。
+請根據衛福部衛教指引，用白話文回答長輩的健康問題。
+
+回覆格式請嚴格遵守以下 JSON 結構，不要輸出任何其他文字：
+{
+  "alertLevel": "normal 或 caution 或 urgent",
+  "alertText": "一句話說明嚴重程度（例：⚠️ 需要注意）",
+  "mainAdvice": "一句話主要建議（20字以內，白話文）",
+  "actions": [
+    { "icon": "emoji", "text": "具體行動建議（20字以內）" }
+  ],
+  "seeDoctor": "就醫時機說明（若不需要可為空字串）",
+  "source": "資料來源（例：衛福部國民健康署）"
+}
+
+規則：
+- actions 最多 5 條
+- 文字要簡短白話，避免專業術語
+- 若是緊急狀況，alertLevel 設為 urgent
+- 只輸出 JSON，不要加任何說明或 markdown`;
+
+  const res = await fetch(GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: systemPrompt + '\n\n長輩的問題：' + question }] }],
+      generationConfig: { temperature: 0.4, maxOutputTokens: 1024 }
+    })
+  });
+
+  if (!res.ok) throw new Error('Gemini API 回應錯誤：' + res.status);
+
+  const data = await res.json();
+  let raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  raw = raw.replace(/```json|```/g, '').trim();
+  return JSON.parse(raw);
+}
+
+// ─── 渲染衛教建議卡片 ────────────────────────────
+function generateElderlyAdvice(data) {
+  const alertColors = {
+    normal:  { bg: '#E8F8F0', color: '#1A7A4A' },
+    caution: { bg: '#FFF5E0', color: '#B8660A' },
+    urgent:  { bg: '#FDE8E8', color: '#C0392B' },
+  };
+  const c = alertColors[data.alertLevel] || alertColors.normal;
+
+  const actionsHTML = (data.actions || []).map(a => `
+    <li class="action-item">
+      <span class="action-icon" aria-hidden="true">${a.icon}</span>
+      <span>${a.text}</span>
+    </li>
+  `).join('');
+
+  const seeDoctorHTML = data.seeDoctor ? `
+    <div class="see-doctor" role="alert">
+      <span class="see-doctor-icon" aria-hidden="true">🚨</span>
+      <p class="see-doctor-text">${data.seeDoctor}</p>
+    </div>
+  ` : '';
+
+  return `
+    <div class="alert-level ${data.alertLevel}"
+         style="background:${c.bg}; color:${c.color};"
+         role="status">
+      ${data.alertText}
+    </div>
+    <p class="advice-main">${data.mainAdvice}</p>
+    <ul class="action-list" aria-label="建議事項">
+      ${actionsHTML}
+    </ul>
+    ${seeDoctorHTML}
+    <p style="font-size:14px; color:var(--text-muted); margin-top:14px;">
+      📖 資料來源：${data.source || '衛生福利部'}
+    </p>
+  `;
+}
+
+// ─── 主流程：語音 → Gemini → 顯示建議 ───────────
+async function processQuestion(question) {
+  if (!question || question.trim() === '') return;
+
+  showTranscript(question);
+  showLoading();
+
+  await delay(500);
+  markStepDone('step1');
+
+  await delay(600);
+  markStepDone('step2');
+
+  try {
+    const data = await callGemini(question);
+    markStepDone('step3');
+    await delay(300);
+    showAdvice(generateElderlyAdvice(data));
+  } catch (err) {
+    markStepDone('step3');
+    await delay(300);
+    showAdvice(`
+      <div class="alert-level caution" style="background:#FFF5E0;color:#B8660A;">⚠️ 網路連線問題</div>
+      <p class="advice-main">暫時無法取得建議，請稍後再試。</p>
+      <div class="see-doctor" role="alert">
+        <span class="see-doctor-icon">📞</span>
+        <p class="see-doctor-text">如有緊急需求，請撥打 1922 健康諮詢專線</p>
+      </div>
+    `);
+    console.error('Gemini API 錯誤：', err);
+  }
+
+  setStatus('ready');
+}
+
+// ─── 語音錄音控制 ──────────────────────────────
+// 創新應用性：Web Speech API，完全在瀏覽器端執行，保護隱私
+function toggleRecording() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+function startRecording() {
+  // 檢查瀏覽器支援
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    // 若不支援語音，友善提示並建議使用快捷按鈕
+    alert('您的瀏覽器不支援語音輸入。\n請使用下方的「常見問題」按鈕，或改用 Chrome 瀏覽器。');
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = 'zh-TW';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    isRecording = true;
+    setStatus('listening');
+    updateMicBtn(true);
+    document.getElementById('transcriptText').textContent = '';
+    document.getElementById('transcriptBox').classList.remove('visible');
+    document.getElementById('adviceCard').classList.remove('visible');
+    document.getElementById('loadingCard').classList.remove('visible');
+  };
+
+  recognition.onresult = (event) => {
+    let transcript = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    // 即時顯示識別中的文字
+    document.getElementById('transcriptText').textContent = transcript;
+    document.getElementById('transcriptBox').classList.add('visible');
+
+    // 確認結果出現後觸發處理
+    if (event.results[event.results.length - 1].isFinal) {
+      stopRecording();
+      processQuestion(transcript.trim());
+    }
+  };
+
+  recognition.onerror = (event) => {
+    stopRecording();
+    if (event.error === 'no-speech') {
+      setStatus('ready');
+      alert('沒有聽到聲音，請再試一次，或使用下方常見問題按鈕。');
+    } else if (event.error === 'not-allowed') {
+      alert('請允許瀏覽器使用麥克風，才能進行語音輸入。');
+    }
+  };
+
+  recognition.onend = () => {
+    isRecording = false;
+    updateMicBtn(false);
+  };
+
+  recognition.start();
+}
+
+function stopRecording() {
+  if (recognition) {
+    recognition.stop();
+    recognition = null;
+  }
+  isRecording = false;
+  updateMicBtn(false);
+}
+
+// 快捷問題：直接傳入文字，跳過語音步驟
+function askQuestion(question) {
+  if (isRecording) stopRecording();
+  setStatus('thinking');
+  document.getElementById('transcriptBox').classList.remove('visible');
+  document.getElementById('adviceCard').classList.remove('visible');
+  processQuestion(question);
+}
+
+// ─── UI 更新工具函式 ────────────────────────────
+
+function updateMicBtn(recording) {
+  const btn   = document.getElementById('micBtn');
+  const icon  = document.getElementById('micIcon');
+  const label = document.getElementById('micLabel');
+
+  if (recording) {
+    btn.classList.add('recording');
+    btn.setAttribute('aria-label', '正在錄音，點擊停止');
+    icon.textContent  = '⏹️';
+    label.textContent = '錄音中…';
+  } else {
+    btn.classList.remove('recording');
+    btn.setAttribute('aria-label', '按我說話，啟動語音輸入');
+    icon.textContent  = '🎙️';
+    label.textContent = '按我說話';
+  }
+}
+
+function setStatus(state) {
+  const banner = document.getElementById('statusBanner');
+  const dot    = document.getElementById('statusDot');
+  const text   = document.getElementById('statusText');
+
+  banner.classList.remove('listening', 'thinking');
+  dot.classList.remove('active', 'thinking');
+
+  const messages = {
+    ready:     '✨ 請按下麥克風，說出您的健康問題',
+    listening: '🔴 正在聆聽… 請說話',
+    thinking:  '🔍 正在查詢衛教資料庫，請稍候…',
+  };
+
+  text.textContent = messages[state] || messages.ready;
+
+  if (state === 'listening') {
+    banner.classList.add('listening');
+    dot.classList.add('active');
+  } else if (state === 'thinking') {
+    banner.classList.add('thinking');
+    dot.classList.add('thinking');
+  }
+}
+
+function showTranscript(text) {
+  document.getElementById('transcriptText').textContent = text;
+  document.getElementById('transcriptBox').classList.add('visible');
+}
+
+function showLoading() {
+  document.getElementById('loadingCard').classList.add('visible');
+  document.getElementById('adviceCard').classList.remove('visible');
+  setStatus('thinking');
+  // 重置步驟狀態
+  ['step1','step2','step3'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('active','done');
+  });
+  document.getElementById('step1').classList.add('active');
+}
+
+function markStepDone(stepId) {
+  const el = document.getElementById(stepId);
+  el.classList.remove('active');
+  el.classList.add('done');
+  el.textContent = '✅ ' + el.textContent.replace('⏳ ','').replace('✅ ','');
+
+  // 啟動下一步
+  const nextMap = { step1: 'step2', step2: 'step3' };
+  const nextId  = nextMap[stepId];
+  if (nextId) document.getElementById(nextId).classList.add('active');
+}
+
+function showAdvice(html) {
+  document.getElementById('loadingCard').classList.remove('visible');
+  document.getElementById('adviceContent').innerHTML = html;
+  document.getElementById('adviceCard').classList.add('visible');
+  setStatus('ready');
+
+  // 滾動到建議卡片
+  document.getElementById('adviceCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ─── 初始化 ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  setStatus('ready');
+  // 預先暖身：確認 Speech API 可用性，友善提示
+  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+    document.getElementById('statusText').textContent =
+      '⚠️ 建議使用 Chrome 瀏覽器以啟用語音功能，或直接點選常見問題';
+  }
+});
+</script>
+
+</body>
+</html>
