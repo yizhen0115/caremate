@@ -571,7 +571,7 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
     <p class="loading-text">CareMate 正在為您查詢資料…</p>
     <div class="loading-steps">
       <div class="step-item" id="step1">⏳ 分析您的問題</div>
-      <div class="step-item" id="step2">⏳ 檢索衛福部權威資料庫</div>
+      <div class="step-item" id="step2">⏳ Google 搜尋衛福部官方資料</div>
       <div class="step-item" id="step3">⏳ 整理最適合您的建議</div>
     </div>
   </div>
@@ -616,35 +616,60 @@ let currentUtter = null;
 
 // ─── Gemini API ──────────────────────────────────
 async function callGemini(question) {
-  const prompt = `你是 CareMate，專為台灣年長者設計的健康衛教助理。
-根據衛福部衛教指引，用白話文回答長輩問題。
-
-嚴格只輸出以下 JSON，不要加任何說明或 markdown：
-{
-  "alertLevel": "normal 或 caution 或 urgent",
-  "alertText": "嚴重程度一句話（加emoji，例：⚠️ 需要注意）",
-  "mainAdvice": "重點建議一句話，30字以內，白話文，結尾加驚嘆號",
-  "actions": [
-    { "icon": "emoji", "text": "行動建議，20字以內" }
-  ],
-  "reminder": "溫馨提醒一句話，20字以內，鼓勵語氣",
-  "seeDoctor": "就醫時機（不需要則為空字串）",
-  "source": "衛福部單位名稱"
-}
-
-規則：actions 最多5條、文字白話簡短、緊急狀況用urgent`;
-
-  const res = await fetch(GEMINI_URL, {
+  // ── 第一步：Google Search grounding，即時查詢衛福部等權威網站 ──
+  const searchRes = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt + '\n\n長輩的問題：' + question }] }],
-      generationConfig: { temperature: 0.4, maxOutputTokens: 1024 }
+      contents: [{ parts: [{ text: `請用繁體中文，根據台灣衛福部、國民健康署等權威網站的資料，回答以下長輩健康問題，提供具體白話的衛教建議：\n\n${question}` }] }],
+      tools: [{ googleSearch: {} }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
     })
   });
-  if (!res.ok) throw new Error('API error ' + res.status);
-  const data = await res.json();
-  let raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  if (!searchRes.ok) throw new Error('Search API error ' + searchRes.status);
+  const searchData = await searchRes.json();
+
+  // 取出搜尋後的自然語言回答
+  const searchAnswer = searchData.candidates?.[0]?.content?.parts
+    ?.filter(p => p.text).map(p => p.text).join('') || '';
+
+  // 取出引用來源
+  const grounds = searchData.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  const sources = grounds.map(g => g.web?.title || '').filter(Boolean).slice(0, 2).join('、') || '衛生福利部';
+
+  // ── 第二步：結構化成 JSON 供 UI 渲染 ──
+  const structPrompt = `你是一個 JSON 格式化工具。
+根據以下衛教資訊，嚴格只輸出 JSON，不要加任何說明或 markdown：
+
+衛教資訊：
+${searchAnswer}
+
+輸出格式：
+{
+  "alertLevel": "normal 或 caution 或 urgent",
+  "alertText": "嚴重程度一句話（加emoji）",
+  "mainAdvice": "重點建議一句話，30字以內，白話文，結尾加驚嘆號",
+  "actions": [
+    { "icon": "適合的emoji", "text": "具體行動建議，20字以內" }
+  ],
+  "reminder": "溫馨提醒一句話，20字以內，鼓勵語氣",
+  "seeDoctor": "就醫時機（不需要則為空字串）",
+  "source": "${sources}"
+}
+
+規則：actions 最多5條、緊急狀況用urgent、只輸出JSON`;
+
+  const fmtRes = await fetch(GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: structPrompt }] }],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+    })
+  });
+  if (!fmtRes.ok) throw new Error('Format API error ' + fmtRes.status);
+  const fmtData = await fmtRes.json();
+  let raw = fmtData.candidates?.[0]?.content?.parts?.[0]?.text || '';
   raw = raw.replace(/```json|```/g, '').trim();
   return JSON.parse(raw);
 }
@@ -922,7 +947,7 @@ function showLoading() {
   ['step1','step2','step3'].forEach(id => {
     const el = document.getElementById(id);
     el.className = 'step-item';
-    el.textContent = { step1:'⏳ 分析您的問題', step2:'⏳ 檢索衛福部權威資料庫', step3:'⏳ 整理最適合您的建議' }[id];
+    el.textContent = { step1:'⏳ 分析您的問題', step2:'⏳ Google 搜尋衛福部官方資料', step3:'⏳ 整理最適合您的建議' }[id];
   });
   document.getElementById('step1').classList.add('active');
 }
