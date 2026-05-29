@@ -616,45 +616,39 @@ let currentUtter = null;
 
 // ─── Gemini API ──────────────────────────────────
 async function callGemini(question) {
-  // ── 第一步：Google Search grounding，即時查詢衛福部等權威網站 ──
-  const searchRes = await fetch(GEMINI_URL, {
+  const prompt = `你是 CareMate，專為台灣年長者設計的健康衛教助理。
+你的回答內容必須依據台灣衛生福利部、國民健康署、疾病管制署等官方衛教資料。
+
+嚴格只輸出以下 JSON，不要加任何說明或 markdown：
+{
+  "alertLevel": "normal 或 caution 或 urgent",
+  "alertText": "嚴重程度一句話（加emoji，例：⚠️ 需要注意）",
+  "mainAdvice": "重點建議一句話，30字以內，白話文，結尾加驚嘆號",
+  "actions": [
+    { "icon": "emoji", "text": "具體行動建議，20字以內" }
+  ],
+  "reminder": "溫馨提醒一句話，20字以內，鼓勵語氣",
+  "seeDoctor": "就醫時機說明（不需要則為空字串）",
+  "source": "對應的衛福部單位（例：衛福部國民健康署）"
+}
+
+規則：actions 最多5條、文字白話簡短、緊急狀況用urgent、只輸出JSON
+
+長輩的問題：${question}`;
+
+  const res = await fetch(GEMINI_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: `請用繁體中文，根據台灣衛福部、國民健康署等權威網站的資料，回答以下長輩健康問題，提供具體白話的衛教建議：\n\n${question}` }] }],
-      tools: [{ googleSearch: {} }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.4, maxOutputTokens: 1024 }
     })
   });
-  if (!searchRes.ok) throw new Error('Search API error ' + searchRes.status);
-  const searchData = await searchRes.json();
-
-  // 取出搜尋後的自然語言回答
-  const searchAnswer = searchData.candidates?.[0]?.content?.parts
-    ?.filter(p => p.text).map(p => p.text).join('') || '';
-
-  // 取出引用來源
-  const grounds = searchData.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-  const sources = grounds.map(g => g.web?.title || '').filter(Boolean).slice(0, 2).join('、') || '衛生福利部';
-
-  // ── 第二步：結構化成 JSON 供 UI 渲染 ──
-  const structPrompt = `你是一個 JSON 格式化工具。
-根據以下衛教資訊，嚴格只輸出 JSON，不要加任何說明或 markdown：
-
-衛教資訊：
-${searchAnswer}
-
-輸出格式：
-{
-  "alertLevel": "normal 或 caution 或 urgent",
-  "alertText": "嚴重程度一句話（加emoji）",
-  "mainAdvice": "重點建議一句話，30字以內，白話文，結尾加驚嘆號",
-  "actions": [
-    { "icon": "適合的emoji", "text": "具體行動建議，20字以內" }
-  ],
-  "reminder": "溫馨提醒一句話，20字以內，鼓勵語氣",
-  "seeDoctor": "就醫時機（不需要則為空字串）",
-  "source": "${sources}"
+  if (!res.ok) throw new Error('API error ' + res.status);
+  const data = await res.json();
+  let raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  raw = raw.replace(/```json|```/g, '').trim();
+  return JSON.parse(raw);
 }
 
 規則：actions 最多5條、緊急狀況用urgent、只輸出JSON`;
